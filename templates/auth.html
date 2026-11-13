@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block content %}<section class="auth card"><div class="eyebrow">RUST TRACK ACCOUNT</div><h1>{{ "Создать аккаунт" if mode == "register" else "С возвращением" }}</h1>
+<form method="post">{{ form.hidden_tag() }}
+<label>{{ form.username.label }}{{ form.username(class_="field", placeholder="Твой никнейм", autocomplete="username") }}</label>{% for e in form.username.errors %}<small class="err">{{ e }}</small>{% endfor %}
+<label>{{ form.password.label }}{{ form.password(class_="field", placeholder="Минимум 8 символов", autocomplete="new-password" if mode == "register" else "current-password") }}</label>{% for e in form.password.errors %}<small class="err">{{ e }}</small>{% endfor %}
+{% if mode == "register" %}<label>{{ form.confirm.label }}{{ form.confirm(class_="field", placeholder="Повтори пароль", autocomplete="new-password") }}</label>{% for e in form.confirm.errors %}<small class="err">{{ e }}</small>{% endfor %}{% endif %}
+<button class="button full" type="submit">{{ "Зарегистрироваться" if mode == "register" else "Войти" }}</button></form>
+<p class="switch">{% if mode == "register" %}Уже есть аккаунт? <a href="{{ url_for('login') }}">Войти</a>{% else %}Нет аккаунта? <a href="{{ url_for('register') }}">Зарегистрироваться</a>{% endif %}</p></section>{% endblock %}

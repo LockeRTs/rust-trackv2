@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block content %}
+<section class="dev-page">
+  <div class="eyebrow">THE PEOPLE BEHIND THE TRACKER</div>
+  <h1>Разработчики</h1>
+  <p class="muted">Команда, которая работает над Rust Track.</p>
+  <div class="dev-grid">
+    {% for name in developers %}
+    <article class="dev-card">
+      <div class="dev-avatar">{{ name[0]|upper }}</div>
+      <div class="dev-role">РАЗРАБОТЧИК</div>
+      <h2>{{ name }}</h2>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

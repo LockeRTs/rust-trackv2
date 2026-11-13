@@ -1,0 +1,89 @@
+{% extends "base.html" %}{% block content %}
+<div class="dash-head"><div><div class="eyebrow">PLAYER DASHBOARD</div><h1>Привет, {{ current_user.username }}</h1><p class="muted">Твой номер в системе: <strong>#{{ current_user.id }}</strong></p></div></div>
+<section class="card search-card">
+  <label for="steamquery">Steam ID или ссылка на профиль</label>
+  <div class="searchline"><input id="steamquery" class="field" placeholder="7656119… или steamcommunity.com/id/..." autocomplete="off"><button class="button" id="lookup">Найти игрока</button></div>
+  <div id="error" class="err" role="status"></div>
+  <p class="tiny">После поиска нажми «Сохранить игрока», чтобы добавить его в список наблюдения.</p>
+</section>
+<section class="card player-card" id="current-card">
+  <div class="player-top"><div class="avatar">R</div><div><h2 id="playername">Ожидаю игрока</h2><p id="status" class="muted">Введи Steam ID, чтобы начать</p><small id="steamid" class="muted"></small></div></div>
+  <div class="stats"><div><small>ЧАСОВ В RUST</small><strong id="hours">—</strong></div><div><small>ПЕРВАЯ ОЧИВКА*</small><strong id="date">—</strong></div><div><small>RUST В БИБЛИОТЕКЕ</small><strong id="owned">—</strong></div></div>
+  <div class="current-actions"><button class="button" id="save-player" disabled>Сохранить игрока</button><span id="save-note" class="muted"></span></div>
+  <p class="tiny">* Дата самой ранней открытой ачивки — приблизительная оценка первого запуска Rust.</p>
+</section>
+<section class="watch-section">
+  <div class="watch-heading"><div><div class="eyebrow">YOUR WATCHLIST</div><h2>Сохранённые игроки</h2></div><span id="watch-count" class="watch-count">0 игроков</span></div>
+  <div id="watchlist" class="watch-grid"><div class="empty-watch">Пока никого нет. Найди игрока и сохрани его.</div></div>
+</section>
+<script>
+const input=document.getElementById('steamquery'), btn=document.getElementById('lookup');
+const saveBtn=document.getElementById('save-player');
+let lastQuery='', currentPlayer=null, busy=false;
+const csrfToken={{ csrf_token()|tojson }};
+async function api(url, options={}) {
+  const headers={...(options.headers||{}), 'X-CSRFToken':csrfToken};
+  if(options.body) headers['Content-Type']='application/json';
+  const response=await fetch(url,{...options,headers});
+  const data=await response.json();
+  if(!response.ok) throw new Error(data.error||'Ошибка запроса');
+  return data;
+}
+function renderPlayer(data, target) {
+  target.innerHTML='';
+  const card=document.createElement('article'); card.className='watch-card';
+  const top=document.createElement('div'); top.className='watch-card-top';
+  const avatar=document.createElement('div'); avatar.className='avatar small-avatar'; avatar.textContent=(data.name||'R').slice(0,1).toUpperCase();
+  const identity=document.createElement('div'); identity.className='watch-identity';
+  const name=document.createElement('h3'); name.textContent=data.name||'Steam игрок';
+  const status=document.createElement('p'); status.className='muted'; status.textContent=data.status||'Статус недоступен';
+  const id=document.createElement('small'); id.className='muted'; id.textContent=data.steamid;
+  identity.append(name,status,id); top.append(avatar,identity); card.append(top);
+  const stats=document.createElement('div'); stats.className='watch-stats';
+  [['ЧАСЫ',data.hours===null?'Нет данных':Number(data.hours).toLocaleString('ru-RU')+' ч'],['ОЧИВКА',data.first_date||'Нет данных'],['RUST',data.rust_found?'Есть':'Нет / скрыто']].forEach(([label,value])=>{
+    const item=document.createElement('div'); const small=document.createElement('small'); small.textContent=label;
+    const strong=document.createElement('strong'); strong.textContent=value; item.append(small,strong); stats.append(item);
+  });
+  const actions=document.createElement('div'); actions.className='watch-actions';
+  const remove=document.createElement('button'); remove.className='mini danger'; remove.textContent='Убрать';
+  remove.addEventListener('click',async()=>{remove.disabled=true;try{await api('/api/watchlist/'+data.steamid,{method:'DELETE'});await loadWatchlist();}catch(e){remove.disabled=false;alert(e.message);}});
+  actions.append(remove); card.append(stats,actions); target.append(card);
+}
+async function loadWatchlist(){
+  const host=document.getElementById('watchlist'); host.innerHTML='';
+  try{
+    const saved=await api('/api/watchlist');
+    document.getElementById('watch-count').textContent=saved.length+' игроков';
+    if(!saved.length){host.innerHTML='<div class="empty-watch">Пока никого нет. Найди игрока и сохрани его.</div>';return;}
+    for(const entry of saved){
+      const slot=document.createElement('div'); slot.className='watch-loading'; slot.textContent='Загружаю '+entry.name+'…'; host.append(slot);
+      try{const data=await api('/api/player/'+encodeURIComponent(entry.steamid));renderPlayer(data,slot);}
+      catch(e){slot.className='watch-card watch-failed';slot.textContent=entry.name+' · '+e.message;}
+    }
+  }catch(e){host.innerHTML='<div class="empty-watch">'+e.message+'</div>';}
+}
+async function lookup(){
+ const q=input.value.trim(); if(!q||busy)return;
+ lastQuery=q;busy=true;btn.disabled=true;btn.textContent='Загрузка…';
+ document.getElementById('error').textContent='';document.getElementById('status').textContent='Загружаю данные Steam…';saveBtn.disabled=true;
+ try{
+  const d=await api('/api/player/'+encodeURIComponent(q));currentPlayer=d;
+  document.getElementById('playername').textContent=d.name;document.getElementById('status').textContent=d.status;
+  document.getElementById('steamid').textContent='SteamID64: '+d.steamid;
+  document.getElementById('hours').textContent=d.hours===null?'Нет данных':d.hours.toLocaleString('ru-RU')+' ч';
+  document.getElementById('date').textContent=d.first_date||'Нет данных';
+  document.getElementById('owned').textContent=d.rust_found?'Да':'Нет / скрыто';
+  saveBtn.disabled=false;document.getElementById('save-note').textContent='';
+ }catch(e){currentPlayer=null;document.getElementById('error').textContent=e.message;document.getElementById('status').textContent='Не удалось загрузить данные';}
+ finally{busy=false;btn.disabled=false;btn.textContent='Найти игрока';}
+}
+btn.addEventListener('click',lookup);input.addEventListener('keydown',e=>{if(e.key==='Enter')lookup();});
+saveBtn.addEventListener('click',async()=>{
+ if(!currentPlayer)return;saveBtn.disabled=true;
+ try{await api('/api/watchlist',{method:'POST',body:JSON.stringify({steamid:currentPlayer.steamid,name:currentPlayer.name})});
+ document.getElementById('save-note').textContent='Игрок сохранён в списке!';await loadWatchlist();}
+ catch(e){document.getElementById('save-note').textContent=e.message;}finally{saveBtn.disabled=false;}
+});
+loadWatchlist();
+setInterval(()=>{if(!busy)loadWatchlist();},30000);
+</script>{% endblock %}

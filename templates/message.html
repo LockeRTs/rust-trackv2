@@ -1,0 +1,1 @@
+{% extends "base.html" %}{% block content %}<section class="card auth"><h1>{{ title }}</h1><p>{{ message }}</p><a class="button" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}">Назад</a></section>{% endblock %}

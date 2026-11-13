@@ -1,0 +1,6 @@
+{% extends "base.html" %}{% block content %}
+<section class="hero"><div class="eyebrow">STEAM PLAYER TRACKER</div><h1>Твоя статистика<br><span>Rust — в одном месте.</span></h1>
+<p>Смотри часы в Rust, статус Steam и примерную дату первой открытой ачивки. Создай аккаунт, чтобы пользоваться трекером.</p>
+<div class="actions"><a class="button" href="{{ url_for('register') }}">Создать аккаунт</a><a class="button secondary" href="{{ url_for('login') }}">У меня уже есть аккаунт</a></div>
+</section><section class="features"><article><b>01</b><h3>Статистика Rust</h3><p>Часы в игре и наличие Rust в библиотеке Steam.</p></article><article><b>02</b><h3>Steam статус</h3><p>Онлайн, офлайн или текущая игра. Обновление раз в 30 секунд.</p></article><article><b>03</b><h3>Номер аккаунта</h3><p>У каждого пользователя свой уникальный последовательный ID.</p></article></section>
+<div class="notice">Steam должен показывать профиль и игровую статистику публично. Дата первой ачивки — приблизительная оценка, а не точное время первого запуска.</div>{% endblock %}
